@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h> // for random
+#include <unistd.h> // for POSIX types
 
 // Intialize global parameters variables
 int NZ = -1;
@@ -36,9 +38,16 @@ void parse_params(int argc, char *argv[])
   }
 }
 
+useconds_t get_random_from_range(int min, int max)
+{
+  return min + (rand() % (max - min + 1));
+}
+
 int main(int argc, char *argv[])
 {
   parse_params(argc, argv);
+
+  usleep(get_random_from_range(F/2, F));
 
   return 0;
 }
