@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>     // for get_random_from_range()
-#include <unistd.h>   // for POSIX types
+#include <unistd.h>   // for forking and POSIX types
 #include <stdarg.h>   // for my_print()
 #include <sys/mman.h> // for shared memory
 #include <fcntl.h>    /* For O_* constants */
@@ -81,7 +81,7 @@ void prepare_output()
   output_file = fopen("proj2.out", "w");
   if (output_file == NULL)
   {
-    fprintf(stderr, "Cannot open file.");
+    fprintf(stderr, "Cannot open file.\n");
     exit(1);
   }
 }
@@ -123,12 +123,115 @@ void my_print(const char *format, ...)
   sem_post(output);
 }
 
+void process_customer(int idZ)
+{
+  // Každý zákazník je jednoznačně identifikován číslem idZ, 0<idZ<=NZ
+  if (0 >= idZ || idZ > NZ)
+  {
+    fprintf(stderr, "Wrong idZ: %d\n", idZ);
+  }
+
+  // Po spuštění vypíše: A: Z idZ: started
+  my_print("Z %d: started\n", idZ);
+
+  // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TZ>
+  usleep(get_random_from_range(0, TZ));
+
+  // Pokud je pošta otevřená
+  if (1) // TODO
+  {
+    // Pokud je pošta otevřená, náhodně vybere činnost X---číslo z intervalu <1,3>
+    int X = get_random_from_range(1, 3);
+
+    // Vypíše: A: Z idZ: entering office for a service X
+    my_print("Z %d: entering office for a service %d\n", idZ, X);
+
+    // Zařadí se do fronty X a čeká na zavolání úředníkem.
+    // TODO
+
+    // Vypíše: Z idZ: called by office worker
+    // TODO
+
+    // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10> (synchronizace s úředníkem na dokončení žádosti není vyžadována).
+    // TODO
+  }
+
+  // Vypíše: A: Z idZ: going home
+  my_print("Z %d: going home\n", idZ);
+
+  // Proces končí
+  exit(0);
+}
+
+void process_officer(int idU)
+{
+  // Každý úředník je jednoznačně identifikován číslem idU, 0<idU<=NU
+  if (idU < 0 || idU > NU)
+  {
+    fprintf(stderr, "Wrong idU: %d\n", idU);
+    exit(1);
+  }
+
+  // Po spuštění vypíše: A: U idU: started
+  my_print("U %d: started\n", idU);
+
+  // [začátek cyklu]
+  for (size_t i = 0; i < 1; i++)
+  {
+    // Tady asi bude `while`, ale pro ted pro odsazeni textu staci cyklus `for`
+
+    // Úředník jde obsloužit zákazníka z fronty X (vybere náhodně libovolnou neprázdnou).
+    // TODO
+    int X = 1;
+
+    // - Vypíše: A: U idU: serving a service of type X
+    my_print("U %d: serving a service of type %d\n", idU, X);
+
+    // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10>
+    usleep(get_random_from_range(0, 10));
+
+    // - Vypíše: A: U idU: service finished
+    my_print("U %d: service finished\n", idU);
+
+    // - Pokračuje na [začátek cyklu]
+  }
+}
+
 int main(int argc, char *argv[])
 {
   parse_params(argc, argv);
   prepare_output();
 
-  // Hlavní proces vytváří ihned po spuštění NZ procesů zákazníků a NU procesů úředníků
+  // Hlavní proces vytváří ihned po spuštění:
+  // NZ procesů zákazníků
+  for (int i = 1; i <= NZ; i++)
+  {
+    pid_t id = fork();
+    if (id == 0)
+    {
+      process_customer(i);
+    }
+    else if (id < 0)
+    {
+      fprintf(stderr, "Error forking customer number %d, pid: %d.\n", i, id);
+      exit(1);
+    }
+  }
+
+  // NU procesů úředníků
+  for (int i = 1; i <= NU; i++)
+  {
+    pid_t id = fork();
+    if (id == 0)
+    {
+      process_officer(i);
+    }
+    else if (id < 0)
+    {
+      fprintf(stderr, "Error forking officer number %d, pid: %d.\n", i, id);
+      exit(1);
+    }
+  }
 
   // Čeká pomocí volání usleep náhodný čas v intervalu <F/2,F>
   usleep(get_random_from_range(F / 2, F));
