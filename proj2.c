@@ -7,6 +7,7 @@
 #include <fcntl.h>    /* For O_* constants */
 #include <sys/stat.h> /* For mode constants */
 #include <semaphore.h>
+#include <wait.h>
 
 // wtf idk inspirace z interfernetu
 #define MMAP(ptr)                                                                                  \
@@ -137,8 +138,8 @@ int main(int argc, char *argv[])
 
   // Poté čeká na ukončení všech procesů, které aplikace vytváří.
   // Wait for children suicide
-  // while (wait(NULL) > 0)
-  //   ;
+  while (wait(NULL) > 0)
+    ;
 
   cleanup_output();
 
