@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h> // for random
+#include <time.h>   // for random
 #include <unistd.h> // for POSIX types
+
+// Define (pointer) global variable for output file
+FILE *output_file;
 
 // Intialize global parameters variables
 int NZ = -1;
@@ -47,7 +50,18 @@ int main(int argc, char *argv[])
 {
   parse_params(argc, argv);
 
-  usleep(get_random_from_range(F/2, F));
+  // Open output file
+  output_file = fopen("proj2.out", "w");
+  if (output_file == NULL)
+  {
+    fprintf(stderr, "Cannot open file.");
+    exit(1);
+  }
+
+  usleep(get_random_from_range(F / 2, F));
+
+  // Close output file
+  fclose(output_file);
 
   return 0;
 }
