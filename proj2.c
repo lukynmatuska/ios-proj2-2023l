@@ -150,12 +150,13 @@ void process_customer(int idZ)
     // TODO
 
     // Vypíše: Z idZ: called by office worker
-    // TODO
+    my_print("Z %d: called by office worker\n", idZ);
 
     // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10> (synchronizace s úředníkem na dokončení žádosti není vyžadována).
-    // TODO
+    usleep(get_random_from_range(0, 10));
   }
 
+  // Pokud je pošta uzavřena (a zároveň po dokončení činnosti, když je otevřená)
   // Vypíše: A: Z idZ: going home
   my_print("Z %d: going home\n", idZ);
 
