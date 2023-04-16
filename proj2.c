@@ -176,6 +176,8 @@ void process_officer(int idU)
   // Po spuštění vypíše: A: U idU: started
   my_print("U %d: started\n", idU);
 
+
+  // TODO BEGIN BLOCK CHECK
   // [začátek cyklu]
   for (size_t i = 0; i < 1; i++)
   {
@@ -196,6 +198,27 @@ void process_officer(int idU)
 
     // - Pokračuje na [začátek cyklu]
   }
+
+  // Pokud v žádné frontě nečeká zákazník a pošta je otevřená vypíše
+  // - Vypíše: A: U idU: taking break
+  my_print("U %d: taking break\n", idU);
+
+  // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TU>
+  usleep(get_random_from_range(0, TU));
+
+  // - Vypíše: A: U idU: break finished
+  my_print("U %d: break finished\n", idU);
+  
+  // - Pokračuje na [začátek cyklu]
+  
+  // Pokud v žádné frontě nečeká zákazník a pošta je zavřená
+  // - Vypíše: A: U idU: going home
+  my_print("U %d: going home\n", idU);
+  
+  // - Proces končí
+  exit(0);
+
+  // TODO END BLOCK CHECK
 }
 
 int main(int argc, char *argv[])
