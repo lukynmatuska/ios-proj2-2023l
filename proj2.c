@@ -21,6 +21,9 @@
   }
 // end of wtf idk inspirace z interfernetu
 
+static const unsigned int COUNT_OF_REQUEST_TYPES = 3;
+static const unsigned int SLEEP_INTERVAL_MAX = 10;
+
 // Define (pointer) global variable for output file
 FILE *output_file;
 int *row_number;
@@ -156,7 +159,7 @@ void process_customer(int idZ)
   if (post_office_open)
   {
     // Pokud je pošta otevřená, náhodně vybere činnost X---číslo z intervalu <1,3>
-    int X = get_random_from_range(1, 3);
+    int X = get_random_from_range(1, COUNT_OF_REQUEST_TYPES);
 
     // Vypíše: A: Z idZ: entering office for a service X
     my_print("Z %d: entering office for a service %d\n", idZ, X);
@@ -168,7 +171,7 @@ void process_customer(int idZ)
     my_print("Z %d: called by office worker\n", idZ);
 
     // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10> (synchronizace s úředníkem na dokončení žádosti není vyžadována).
-    usleep(get_random_from_range(0, 10));
+    usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX));
   }
 
   // Pokud je pošta uzavřena (a zároveň po dokončení činnosti, když je otevřená)
@@ -205,7 +208,7 @@ void process_officer(int idU)
     my_print("U %d: serving a service of type %d\n", idU, X);
 
     // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10>
-    usleep(get_random_from_range(0, 10));
+    usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX));
 
     // - Vypíše: A: U idU: service finished
     my_print("U %d: service finished\n", idU);
