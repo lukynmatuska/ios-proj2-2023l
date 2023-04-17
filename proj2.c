@@ -8,6 +8,7 @@
 #include <sys/stat.h> /* For mode constants */
 #include <semaphore.h>
 #include <wait.h>
+#include <stdbool.h>
 
 // wtf idk inspirace z interfernetu
 #define MMAP(ptr)                                                                                  \
@@ -31,6 +32,9 @@ int NU = -1;
 int TZ = -1;
 int TU = -1;
 int F = -1;
+
+// Declaration of shared variables
+bool *post_office_open;
 
 void parse_params(int argc, char *argv[])
 {
@@ -123,6 +127,17 @@ void my_print(const char *format, ...)
   sem_post(output);
 }
 
+void prepare_shared_variables()
+{
+  MMAP(post_office_open);
+  *post_office_open = true;
+}
+
+void cleanup_shared_variables()
+{
+  UNMAP(post_office_open);
+}
+
 void process_customer(int idZ)
 {
   // Každý zákazník je jednoznačně identifikován číslem idZ, 0<idZ<=NZ
@@ -138,7 +153,7 @@ void process_customer(int idZ)
   usleep(get_random_from_range(0, TZ));
 
   // Pokud je pošta otevřená
-  if (1) // TODO
+  if (post_office_open)
   {
     // Pokud je pošta otevřená, náhodně vybere činnost X---číslo z intervalu <1,3>
     int X = get_random_from_range(1, 3);
@@ -176,7 +191,6 @@ void process_officer(int idU)
   // Po spuštění vypíše: A: U idU: started
   my_print("U %d: started\n", idU);
 
-
   // TODO BEGIN BLOCK CHECK
   // [začátek cyklu]
   for (size_t i = 0; i < 1; i++)
@@ -200,24 +214,31 @@ void process_officer(int idU)
   }
 
   // Pokud v žádné frontě nečeká zákazník a pošta je otevřená vypíše
-  // - Vypíše: A: U idU: taking break
-  my_print("U %d: taking break\n", idU);
+  // TODO fronta
+  if (true && post_office_open)
+  {
+    // - Vypíše: A: U idU: taking break
+    my_print("U %d: taking break\n", idU);
 
-  // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TU>
-  usleep(get_random_from_range(0, TU));
+    // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TU>
+    usleep(get_random_from_range(0, TU));
 
-  // - Vypíše: A: U idU: break finished
-  my_print("U %d: break finished\n", idU);
-  
-  // - Pokračuje na [začátek cyklu]
-  
+    // - Vypíše: A: U idU: break finished
+    my_print("U %d: break finished\n", idU);
+
+    // - Pokračuje na [začátek cyklu]
+  }
+
   // Pokud v žádné frontě nečeká zákazník a pošta je zavřená
+  // TODO fronta
+  if (true && !post_office_open)
+  {
   // - Vypíše: A: U idU: going home
   my_print("U %d: going home\n", idU);
-  
+
   // - Proces končí
   exit(0);
-
+  }
   // TODO END BLOCK CHECK
 }
 
@@ -225,6 +246,7 @@ int main(int argc, char *argv[])
 {
   parse_params(argc, argv);
   prepare_output();
+  prepare_shared_variables();
 
   // Hlavní proces vytváří ihned po spuštění:
   // NZ procesů zákazníků
@@ -260,6 +282,9 @@ int main(int argc, char *argv[])
   // Čeká pomocí volání usleep náhodný čas v intervalu <F/2,F>
   usleep(get_random_from_range(F / 2, F));
 
+  // Close post office
+  post_office_open = false;
+
   // Vypíše: A: closing
   my_print("closing\n");
 
@@ -268,6 +293,7 @@ int main(int argc, char *argv[])
   while (wait(NULL) > 0)
     ;
 
+  cleanup_shared_variables();
   cleanup_output();
 
   // Jakmile jsou tyto procesy ukončeny, ukončí se i hlavní proces s kódem (exit code) 0.
