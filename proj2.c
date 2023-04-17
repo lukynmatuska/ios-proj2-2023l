@@ -194,12 +194,9 @@ void process_officer(int idU)
   // Po spuštění vypíše: A: U idU: started
   my_print("U %d: started\n", idU);
 
-  // TODO BEGIN BLOCK CHECK
   // [začátek cyklu]
-  for (size_t i = 0; i < 1; i++)
+  while (post_office_open)
   {
-    // Tady asi bude `while`, ale pro ted pro odsazeni textu staci cyklus `for`
-
     // Úředník jde obsloužit zákazníka z fronty X (vybere náhodně libovolnou neprázdnou).
     // TODO
     int X = 1;
@@ -214,12 +211,9 @@ void process_officer(int idU)
     my_print("U %d: service finished\n", idU);
 
     // - Pokračuje na [začátek cyklu]
-  }
 
-  // Pokud v žádné frontě nečeká zákazník a pošta je otevřená vypíše
-  // TODO fronta
-  if (true && post_office_open)
-  {
+    // Pokud v žádné frontě nečeká zákazník a pošta je otevřená vypíše
+    // TODO fronta
     // - Vypíše: A: U idU: taking break
     my_print("U %d: taking break\n", idU);
 
@@ -236,11 +230,11 @@ void process_officer(int idU)
   // TODO fronta
   if (true && !post_office_open)
   {
-  // - Vypíše: A: U idU: going home
-  my_print("U %d: going home\n", idU);
+    // - Vypíše: A: U idU: going home
+    my_print("U %d: going home\n", idU);
 
-  // - Proces končí
-  exit(0);
+    // - Proces končí
+    exit(0);
   }
   // TODO END BLOCK CHECK
 }
