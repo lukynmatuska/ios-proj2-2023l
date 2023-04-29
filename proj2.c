@@ -37,6 +37,7 @@ int TU = -1;
 int F = -1;
 
 // Declaration of shared variables
+sem_t *post_office_mutex;
 bool *post_office_open;
 
 void parse_params(int argc, char *argv[])
@@ -132,13 +133,40 @@ void my_print(const char *format, ...)
 
 void prepare_shared_variables()
 {
+  /* Post office status */
+  MMAP(post_office_mutex);
+  sem_init(post_office_mutex, 1, 1);
+
   MMAP(post_office_open);
   *post_office_open = true;
+  /* End of post office status*/
 }
 
 void cleanup_shared_variables()
 {
+  /* Post office status */
+  sem_destroy(post_office_mutex);
+  UNMAP(post_office_mutex);
   UNMAP(post_office_open);
+  /* End of post office status */
+}
+
+bool is_post_office_open()
+{
+  // create help variable
+  bool help;
+
+  // close
+  sem_wait(post_office_mutex);
+
+  // get state of post office
+  help = *(post_office_open);
+
+  // open
+  sem_post(post_office_mutex);
+
+  // return help variable
+  return help;
 }
 
 void process_customer(int idZ)
@@ -157,7 +185,7 @@ void process_customer(int idZ)
   usleep(get_random_from_range(0, TZ) * 1000);
 
   // Pokud je pošta otevřená
-  if (post_office_open)
+  if (is_post_office_open())
   {
     // Pokud je pošta otevřená, náhodně vybere činnost X---číslo z intervalu <1,3>
     int X = get_random_from_range(1, COUNT_OF_REQUEST_TYPES);
@@ -196,7 +224,7 @@ void process_officer(int idU)
   my_print("U %d: started\n", idU);
 
   // [začátek cyklu]
-  while (post_office_open)
+  while (is_post_office_open())
   {
     // Úředník jde obsloužit zákazníka z fronty X (vybere náhodně libovolnou neprázdnou).
     // TODO
@@ -229,7 +257,7 @@ void process_officer(int idU)
 
   // Pokud v žádné frontě nečeká zákazník a pošta je zavřená
   // TODO fronta
-  if (true && !post_office_open)
+  if (true && !(is_post_office_open()))
   {
     // - Vypíše: A: U idU: going home
     my_print("U %d: going home\n", idU);
@@ -280,11 +308,17 @@ int main(int argc, char *argv[])
   // Čeká pomocí volání usleep náhodný čas v intervalu <F/2,F>
   usleep(get_random_from_range(F / 2, F) * 1000);
 
-  // Close post office
-  post_office_open = false;
-
   // Vypíše: A: closing
   my_print("closing\n");
+
+  // Lock writer
+  sem_wait(post_office_mutex);
+
+  // Close post office
+  *post_office_open = false;
+
+  // Unlock writer
+  sem_post(post_office_mutex);
 
   // Poté čeká na ukončení všech procesů, které aplikace vytváří.
   // Wait for children suicide
