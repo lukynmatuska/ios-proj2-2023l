@@ -154,7 +154,7 @@ void process_customer(int idZ)
   my_print("Z %d: started\n", idZ);
 
   // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TZ>
-  usleep(get_random_from_range(0, TZ));
+  usleep(get_random_from_range(0, TZ) * 1000);
 
   // Pokud je pošta otevřená
   if (post_office_open)
@@ -172,7 +172,7 @@ void process_customer(int idZ)
     my_print("Z %d: called by office worker\n", idZ);
 
     // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10> (synchronizace s úředníkem na dokončení žádosti není vyžadována).
-    usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX));
+    usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX) * 1000);
   }
 
   // Pokud je pošta uzavřena (a zároveň po dokončení činnosti, když je otevřená)
@@ -206,7 +206,7 @@ void process_officer(int idU)
     my_print("U %d: serving a service of type %d\n", idU, X);
 
     // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10>
-    usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX));
+    usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX) * 1000);
 
     // - Vypíše: A: U idU: service finished
     my_print("U %d: service finished\n", idU);
@@ -219,7 +219,7 @@ void process_officer(int idU)
     my_print("U %d: taking break\n", idU);
 
     // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TU>
-    usleep(get_random_from_range(0, TU));
+    usleep(get_random_from_range(0, TU) * 1000);
 
     // - Vypíše: A: U idU: break finished
     my_print("U %d: break finished\n", idU);
@@ -278,7 +278,7 @@ int main(int argc, char *argv[])
   }
 
   // Čeká pomocí volání usleep náhodný čas v intervalu <F/2,F>
-  usleep(get_random_from_range(F / 2, F));
+  usleep(get_random_from_range(F / 2, F) * 1000);
 
   // Close post office
   post_office_open = false;
