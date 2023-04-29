@@ -48,7 +48,7 @@ void parse_params(int argc, char *argv[])
     fprintf(
         stderr,
         "Invalid count of arguments!\nUse: ./proj2 NZ NU TZ TU F\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   // Get values of arguments
@@ -64,7 +64,7 @@ void parse_params(int argc, char *argv[])
     fprintf(
         stderr,
         "Invalid value of argument(s)!\nUse: 0 <= TZ <= 10000, 0 <= TU <= 100, 0 <= F <= 10000\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -91,7 +91,7 @@ void prepare_output()
   if (output_file == NULL)
   {
     fprintf(stderr, "Cannot open file.\n");
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 }
 
@@ -176,7 +176,7 @@ void process_customer(int idZ)
   if (0 >= idZ || idZ > NZ)
   {
     fprintf(stderr, "Wrong idZ: %d\n", idZ);
-    exit(1); // end with error code
+    exit(EXIT_FAILURE);
   }
 
   // Po spuštění vypíše: A: Z idZ: started
@@ -209,7 +209,7 @@ void process_customer(int idZ)
   my_print("Z %d: going home\n", idZ);
 
   // Proces končí
-  exit(0);
+  exit(EXIT_SUCCESS);
 }
 
 void process_officer(int idU)
@@ -218,7 +218,7 @@ void process_officer(int idU)
   if (idU < 0 || idU > NU)
   {
     fprintf(stderr, "Wrong idU: %d\n", idU);
-    exit(1);
+    exit(EXIT_FAILURE);
   }
 
   // Po spuštění vypíše: A: U idU: started
@@ -264,8 +264,8 @@ void process_officer(int idU)
     my_print("U %d: going home\n", idU);
 
     // - Proces končí
-    exit(0);
-  }
+      exit(EXIT_SUCCESS);
+    }
   // TODO END BLOCK CHECK
 }
 
@@ -283,11 +283,12 @@ int main(int argc, char *argv[])
     if (id == 0)
     {
       process_customer(i);
+      exit(EXIT_SUCCESS);
     }
     else if (id < 0)
     {
       fprintf(stderr, "Error forking customer number %d, pid: %d.\n", i, id);
-      exit(1);
+      exit(EXIT_FAILURE);
     }
   }
 
@@ -298,11 +299,12 @@ int main(int argc, char *argv[])
     if (id == 0)
     {
       process_officer(i);
+      exit(EXIT_SUCCESS);
     }
     else if (id < 0)
     {
       fprintf(stderr, "Error forking officer number %d, pid: %d.\n", i, id);
-      exit(1);
+      exit(EXIT_FAILURE);
     }
   }
 
