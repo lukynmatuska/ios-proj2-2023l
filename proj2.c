@@ -147,6 +147,7 @@ void process_customer(int idZ)
   if (0 >= idZ || idZ > NZ)
   {
     fprintf(stderr, "Wrong idZ: %d\n", idZ);
+    exit(1); // end with error code
   }
 
   // Po spuštění vypíše: A: Z idZ: started
