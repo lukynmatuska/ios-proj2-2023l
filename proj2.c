@@ -70,6 +70,7 @@ void parse_params(int argc, char *argv[])
 
 useconds_t get_random_from_range(int min, int max)
 {
+  srand(time(0) * getpid());
   return min + (rand() % (max - min + 1));
 }
 
