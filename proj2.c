@@ -37,8 +37,25 @@ int TU = -1;
 int F = -1;
 
 // Declaration of shared variables
-sem_t *post_office_mutex;
 bool *post_office_open;
+
+sem_t *shared_variables_mutex;
+
+sem_t *letterCustomerQueue;
+int *letterCustomerCount;
+
+sem_t *packageCustomerQueue;
+int *packageCustomerCount;
+
+sem_t *moneyCustomerQueue;
+int *moneyCustomerCount;
+
+enum post_office_request
+{
+  letter = 1,
+  package = 2,
+  money = 3
+};
 
 void parse_params(int argc, char *argv[])
 {
@@ -135,39 +152,80 @@ void my_print(const char *format, ...)
 void prepare_shared_variables()
 {
   /* Post office status */
-  MMAP(post_office_mutex);
-  sem_init(post_office_mutex, 1, 1);
-
   MMAP(post_office_open);
   *post_office_open = true;
   /* End of post office status*/
+
+  MMAP(shared_variables_mutex);
+  sem_init(shared_variables_mutex, 1, 1);
+
+  MMAP(letterCustomerQueue);
+  sem_init(letterCustomerQueue, 1, 0);
+  MMAP(letterCustomerCount);
+  *letterCustomerCount = 0;
+
+  MMAP(packageCustomerQueue);
+  sem_init(packageCustomerQueue, 1, 0);
+  MMAP(packageCustomerCount);
+  *packageCustomerCount = 0;
+
+  MMAP(moneyCustomerQueue);
+  sem_init(moneyCustomerQueue, 1, 0);
+  MMAP(moneyCustomerCount);
+  *moneyCustomerCount = 0;
 }
 
 void cleanup_shared_variables()
 {
   /* Post office status */
-  sem_destroy(post_office_mutex);
-  UNMAP(post_office_mutex);
   UNMAP(post_office_open);
-  /* End of post office status */
+
+  sem_destroy(shared_variables_mutex);
+  UNMAP(shared_variables_mutex);
+
+  sem_destroy(letterCustomerQueue);
+  UNMAP(letterCustomerQueue);
+  UNMAP(letterCustomerCount);
+
+  sem_destroy(packageCustomerQueue);
+  UNMAP(packageCustomerQueue);
+  UNMAP(packageCustomerCount);
+
+  sem_destroy(moneyCustomerQueue);
+  UNMAP(moneyCustomerQueue);
+  UNMAP(moneyCustomerCount);
 }
 
-bool is_post_office_open()
+bool is_post_office_empty()
 {
-  // create help variable
-  bool help;
+  bool result = true;
+  for (size_t i = 0; i < COUNT_OF_REQUEST_TYPES; i++)
+  {
+    switch (i)
+    {
+    case letter:
+      if (*letterCustomerCount > 0)
+      {
+        result = false;
+      }
+      break;
 
-  // close
-  sem_wait(post_office_mutex);
+    case package:
+      if (*packageCustomerCount > 0)
+      {
+        result = false;
+      }
+      break;
 
-  // get state of post office
-  help = *(post_office_open);
-
-  // open
-  sem_post(post_office_mutex);
-
-  // return help variable
-  return help;
+    case money:
+      if (*moneyCustomerCount > 0)
+      {
+        result = false;
+      }
+      break;
+    }
+  }
+  return result;
 }
 
 void process_customer(int idZ)
@@ -185,23 +243,47 @@ void process_customer(int idZ)
   // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TZ>
   usleep(get_random_from_range(0, TZ) * 1000);
 
+  sem_wait(shared_variables_mutex); // lock mutex
   // Pokud je pošta otevřená
-  if (is_post_office_open())
+  if (*post_office_open)
   {
+    sem_post(shared_variables_mutex); // unlock mutex
     // Pokud je pošta otevřená, náhodně vybere činnost X---číslo z intervalu <1,3>
     int X = get_random_from_range(1, COUNT_OF_REQUEST_TYPES);
 
     // Vypíše: A: Z idZ: entering office for a service X
     my_print("Z %d: entering office for a service %d\n", idZ, X);
 
+    sem_wait(shared_variables_mutex); // lock mutex
     // Zařadí se do fronty X a čeká na zavolání úředníkem.
-    // TODO
+    switch (X)
+    {
+    case letter:
+      *(letterCustomerCount) += 1;
+      sem_post(shared_variables_mutex); // unlock mutex
+      sem_wait(letterCustomerQueue); // add to queue
+      break;
+
+    case package:
+      *(packageCustomerCount) += 1;
+      sem_post(shared_variables_mutex); // unlock mutex
+      sem_wait(packageCustomerQueue); // add to queue
+      break;
+
+    case money:
+      *(moneyCustomerCount) += 1;
+      sem_post(shared_variables_mutex); // unlock mutex
+      sem_wait(moneyCustomerQueue); // add to queue
+      break;
+    }
 
     // Vypíše: Z idZ: called by office worker
     my_print("Z %d: called by office worker\n", idZ);
 
     // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10> (synchronizace s úředníkem na dokončení žádosti není vyžadována).
     usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX) * 1000);
+  } else {
+    sem_post(shared_variables_mutex); // unlock mutex
   }
 
   // Pokud je pošta uzavřena (a zároveň po dokončení činnosti, když je otevřená)
@@ -225,48 +307,108 @@ void process_officer(int idU)
   my_print("U %d: started\n", idU);
 
   // [začátek cyklu]
-  while (is_post_office_open())
+  while (true)
   {
-    // Úředník jde obsloužit zákazníka z fronty X (vybere náhodně libovolnou neprázdnou).
-    // TODO
-    int X = 1;
+    sem_wait(shared_variables_mutex); // lock mutex
+    // Pokud v žádné frontě nečeká zákazník a pošta je otevřená
+    if (is_post_office_empty() && *post_office_open)
+    {
+      sem_post(shared_variables_mutex); // unlock mutex
+      // - Vypíše: A: U idU: taking break
+      my_print("U %d: taking break\n", idU);
 
-    // - Vypíše: A: U idU: serving a service of type X
-    my_print("U %d: serving a service of type %d\n", idU, X);
+      // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TU>
+      usleep(get_random_from_range(0, TU) * 1000);
 
-    // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10>
-    usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX) * 1000);
+      // - Vypíše: A: U idU: break finished
+      my_print("U %d: break finished\n", idU);
 
-    // - Vypíše: A: U idU: service finished
-    my_print("U %d: service finished\n", idU);
+      // - Pokračuje na [začátek cyklu]
+      continue;
+    }
+    else if (!is_post_office_empty())
+    {
+      sem_post(shared_variables_mutex); // unlock mutex
+      // Úředník jde obsloužit zákazníka z fronty X (vybere náhodně libovolnou neprázdnou).
+      bool is_empty = false;
+      int X = -1;
+      do
+      {
+        X = get_random_from_range(1, COUNT_OF_REQUEST_TYPES);
+        sem_wait(shared_variables_mutex); // lock mutex
+        switch (X)
+        {
+        case letter:
+          if (*letterCustomerCount <= 0)
+          {
+            sem_post(shared_variables_mutex); // unlock mutex
+            is_empty = true;
+          }
+          else
+          {
+            *(letterCustomerCount) -= 1;
+            sem_post(shared_variables_mutex); // unlock mutex
+            sem_post(letterCustomerQueue);    // remove from queue
+            is_empty = false;
+          }
+          break;
 
-    // - Pokračuje na [začátek cyklu]
+        case package:
+          if (*packageCustomerCount <= 0)
+          {
+            sem_post(shared_variables_mutex); // unlock mutex
+            is_empty = true;
+          }
+          else
+          {
+            *(packageCustomerCount) -= 1;
+            sem_post(shared_variables_mutex); // unlock mutex
+            sem_post(packageCustomerQueue);   // remove from queue
+            is_empty = false;
+          }
+          break;
 
-    // Pokud v žádné frontě nečeká zákazník a pošta je otevřená vypíše
-    // TODO fronta
-    // - Vypíše: A: U idU: taking break
-    my_print("U %d: taking break\n", idU);
+        case money:
+          if (*moneyCustomerCount <= 0)
+          {
+            sem_post(shared_variables_mutex); // unlock mutex
+            is_empty = true;
+          }
+          else
+          {
+            *(moneyCustomerCount) -= 1;
+            sem_post(shared_variables_mutex); // unlock mutex
+            sem_post(moneyCustomerQueue);     // remove from queue
+            is_empty = false;
+          }
+          break;
+        }
+      } while (is_empty);
+      // Nyní má úředník vybráno z náhodné neprázdné fronty
 
-    // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,TU>
-    usleep(get_random_from_range(0, TU) * 1000);
+      // - Vypíše: A: U idU: serving a service of type X
+      my_print("U %d: serving a service of type %d\n", idU, X);
 
-    // - Vypíše: A: U idU: break finished
-    my_print("U %d: break finished\n", idU);
+      // - Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10>
+      usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX) * 1000);
 
-    // - Pokračuje na [začátek cyklu]
-  }
+      // - Vypíše: A: U idU: service finished
+      my_print("U %d: service finished\n", idU);
 
-  // Pokud v žádné frontě nečeká zákazník a pošta je zavřená
-  // TODO fronta
-  if (true && !(is_post_office_open()))
-  {
-    // - Vypíše: A: U idU: going home
-    my_print("U %d: going home\n", idU);
+      // - Pokračuje na [začátek cyklu]
+      continue;
+    }
+    // Pokud v žádné frontě nečeká zákazník a pošta je zavřená
+    else
+    {
+      sem_post(shared_variables_mutex); // unlock mutex
+      // - Vypíše: A: U idU: going home
+      my_print("U %d: going home\n", idU);
 
-    // - Proces končí
+      // - Proces končí
       exit(EXIT_SUCCESS);
     }
-  // TODO END BLOCK CHECK
+  }
 }
 
 int main(int argc, char *argv[])
@@ -311,17 +453,13 @@ int main(int argc, char *argv[])
   // Čeká pomocí volání usleep náhodný čas v intervalu <F/2,F>
   usleep(get_random_from_range(F / 2, F) * 1000);
 
+  // Close post office
+  sem_wait(shared_variables_mutex); // lock mutex
+  *post_office_open = false;
+  sem_post(shared_variables_mutex); // unlock mutex
+
   // Vypíše: A: closing
   my_print("closing\n");
-
-  // Lock writer
-  sem_wait(post_office_mutex);
-
-  // Close post office
-  *post_office_open = false;
-
-  // Unlock writer
-  sem_post(post_office_mutex);
 
   // Poté čeká na ukončení všech procesů, které aplikace vytváří.
   // Wait for children suicide
