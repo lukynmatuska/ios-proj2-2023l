@@ -254,23 +254,25 @@ void process_customer(int idZ)
     // Vypíše: A: Z idZ: entering office for a service X
     my_print("Z %d: entering office for a service %d\n", idZ, X);
 
-    sem_wait(shared_variables_mutex); // lock mutex
     // Zařadí se do fronty X a čeká na zavolání úředníkem.
     switch (X)
     {
     case letter:
+      sem_wait(shared_variables_mutex); // lock mutex
       *(letterCustomerCount) += 1;
       sem_post(shared_variables_mutex); // unlock mutex
       sem_wait(letterCustomerQueue); // add to queue
       break;
 
     case package:
+      sem_wait(shared_variables_mutex); // lock mutex
       *(packageCustomerCount) += 1;
       sem_post(shared_variables_mutex); // unlock mutex
       sem_wait(packageCustomerQueue); // add to queue
       break;
 
     case money:
+      sem_wait(shared_variables_mutex); // lock mutex
       *(moneyCustomerCount) += 1;
       sem_post(shared_variables_mutex); // unlock mutex
       sem_wait(moneyCustomerQueue); // add to queue
