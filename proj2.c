@@ -261,21 +261,21 @@ void process_customer(int idZ)
       sem_wait(shared_variables_mutex); // lock mutex
       *(letterCustomerCount) += 1;
       sem_post(shared_variables_mutex); // unlock mutex
-      sem_wait(letterCustomerQueue); // add to queue
+      sem_wait(letterCustomerQueue);    // add to queue
       break;
 
     case package:
       sem_wait(shared_variables_mutex); // lock mutex
       *(packageCustomerCount) += 1;
       sem_post(shared_variables_mutex); // unlock mutex
-      sem_wait(packageCustomerQueue); // add to queue
+      sem_wait(packageCustomerQueue);   // add to queue
       break;
 
     case money:
       sem_wait(shared_variables_mutex); // lock mutex
       *(moneyCustomerCount) += 1;
       sem_post(shared_variables_mutex); // unlock mutex
-      sem_wait(moneyCustomerQueue); // add to queue
+      sem_wait(moneyCustomerQueue);     // add to queue
       break;
     }
 
@@ -284,7 +284,9 @@ void process_customer(int idZ)
 
     // Následně čeká pomocí volání usleep náhodný čas v intervalu <0,10> (synchronizace s úředníkem na dokončení žádosti není vyžadována).
     usleep(get_random_from_range(0, SLEEP_INTERVAL_MAX) * 1000);
-  } else {
+  }
+  else
+  {
     sem_post(shared_variables_mutex); // unlock mutex
   }
 
@@ -312,8 +314,18 @@ void process_officer(int idU)
   while (true)
   {
     sem_wait(shared_variables_mutex); // lock mutex
+    // Pokud v žádné frontě nečeká zákazník a pošta je zavřená
+    if (is_post_office_empty() && !(*post_office_open))
+    {
+      sem_post(shared_variables_mutex); // unlock mutex
+      // - Vypíše: A: U idU: going home
+      my_print("U %d: going home\n", idU);
+
+      // - Proces končí
+      exit(EXIT_SUCCESS);
+    }
     // Pokud v žádné frontě nečeká zákazník a pošta je otevřená
-    if (is_post_office_empty() && *post_office_open)
+    else if (is_post_office_empty() && *post_office_open)
     {
       sem_post(shared_variables_mutex); // unlock mutex
       // - Vypíše: A: U idU: taking break
@@ -399,16 +411,6 @@ void process_officer(int idU)
 
       // - Pokračuje na [začátek cyklu]
       continue;
-    }
-    // Pokud v žádné frontě nečeká zákazník a pošta je zavřená
-    else
-    {
-      sem_post(shared_variables_mutex); // unlock mutex
-      // - Vypíše: A: U idU: going home
-      my_print("U %d: going home\n", idU);
-
-      // - Proces končí
-      exit(EXIT_SUCCESS);
     }
   }
 }
