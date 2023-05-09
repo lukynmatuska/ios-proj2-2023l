@@ -199,7 +199,7 @@ void cleanup_shared_variables()
 bool is_post_office_empty()
 {
   bool result = true;
-  for (size_t i = 0; i < COUNT_OF_REQUEST_TYPES; i++)
+  for (size_t i = 1; i <= COUNT_OF_REQUEST_TYPES; i++)
   {
     switch (i)
     {
@@ -342,26 +342,22 @@ void process_officer(int idU)
     }
     else if (!is_post_office_empty())
     {
-      sem_post(shared_variables_mutex); // unlock mutex
       // Úředník jde obsloužit zákazníka z fronty X (vybere náhodně libovolnou neprázdnou).
       bool is_empty = false;
       int X = -1;
       do
       {
         X = get_random_from_range(1, COUNT_OF_REQUEST_TYPES);
-        sem_wait(shared_variables_mutex); // lock mutex
         switch (X)
         {
         case letter:
           if (*letterCustomerCount <= 0)
           {
-            sem_post(shared_variables_mutex); // unlock mutex
             is_empty = true;
           }
           else
           {
             *(letterCustomerCount) -= 1;
-            sem_post(shared_variables_mutex); // unlock mutex
             sem_post(letterCustomerQueue);    // remove from queue
             is_empty = false;
           }
@@ -370,13 +366,11 @@ void process_officer(int idU)
         case package:
           if (*packageCustomerCount <= 0)
           {
-            sem_post(shared_variables_mutex); // unlock mutex
             is_empty = true;
           }
           else
           {
             *(packageCustomerCount) -= 1;
-            sem_post(shared_variables_mutex); // unlock mutex
             sem_post(packageCustomerQueue);   // remove from queue
             is_empty = false;
           }
@@ -385,19 +379,18 @@ void process_officer(int idU)
         case money:
           if (*moneyCustomerCount <= 0)
           {
-            sem_post(shared_variables_mutex); // unlock mutex
             is_empty = true;
           }
           else
           {
             *(moneyCustomerCount) -= 1;
-            sem_post(shared_variables_mutex); // unlock mutex
             sem_post(moneyCustomerQueue);     // remove from queue
             is_empty = false;
           }
           break;
         }
       } while (is_empty);
+      sem_post(shared_variables_mutex); // unlock mutex
       // Nyní má úředník vybráno z náhodné neprázdné fronty
 
       // - Vypíše: A: U idU: serving a service of type X
@@ -411,6 +404,8 @@ void process_officer(int idU)
 
       // - Pokračuje na [začátek cyklu]
       continue;
+     } else {
+      sem_post(shared_variables_mutex); // unlock mutex
     }
   }
 }
@@ -460,10 +455,9 @@ int main(int argc, char *argv[])
   // Close post office
   sem_wait(shared_variables_mutex); // lock mutex
   *post_office_open = false;
-  sem_post(shared_variables_mutex); // unlock mutex
-
   // Vypíše: A: closing
   my_print("closing\n");
+  sem_post(shared_variables_mutex); // unlock mutex
 
   // Poté čeká na ukončení všech procesů, které aplikace vytváří.
   // Wait for children suicide
